@@ -78,6 +78,11 @@ class PerlaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 async with PerlaVnc(self.host) as vnc:
                     await set_holiday_mode(vnc, enabled)
             except (VncError, NavigationError) as err:
+                _LOGGER.warning(
+                    "Switching holiday mode %s via the display failed: %s",
+                    "on" if enabled else "off",
+                    err,
+                )
                 raise PerlaControlError(str(err)) from err
 
         for _ in range(VERIFY_ATTEMPTS):

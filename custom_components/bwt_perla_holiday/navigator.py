@@ -130,12 +130,16 @@ async def set_holiday_mode(
 
         if screen is Screen.HOLIDAY:
             state = toggle_state(frame)
+            _LOGGER.debug("Holiday toggle is %s, want %s", state, enabled)
             if state is enabled:
                 break
             if toggles >= 3:
                 raise NavigationError("Toggle did not change after 3 taps")
             toggles += 1
             await vnc.tap(*TAP_TOGGLE)
+            if await _wait_for_toggle(vnc, enabled):
+                break
+            continue
         elif screen is Screen.HOME:
             await vnc.tap(*TAP_MENU)
         elif screen is Screen.MENU:
@@ -159,6 +163,30 @@ async def set_holiday_mode(
         except Exception:  # noqa: BLE001 - cosmetic only
             _LOGGER.debug("Could not return display to home screen", exc_info=True)
     return enabled
+
+
+async def _wait_for_toggle(
+    vnc: PerlaVnc, enabled: bool, *, timeout: float = 8.0, interval: float = 1.0
+) -> bool:
+    """After a toggle tap, only observe (never tap) until the state is reached.
+
+    Intermediate frames (animation, short busy overlays) are ignored so that
+    no stray "back" tap can leave the page while the device reacts.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while loop.time() < deadline:
+        await asyncio.sleep(interval)
+        frame = await vnc.capture()
+        screen = classify(frame)
+        state = toggle_state(frame) if screen is Screen.HOLIDAY else None
+        _LOGGER.debug("After toggle tap: screen %s, toggle %s", screen.value, state)
+        if state is enabled:
+            return True
+        if screen is Screen.HOLIDAY and state is (not enabled):
+            # Settled in the old position: tap was not accepted.
+            return False
+    return False
 
 
 async def go_home(vnc: PerlaVnc, *, settle: float = 1.5, max_steps: int = 5) -> None:

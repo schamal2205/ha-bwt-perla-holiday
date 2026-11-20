@@ -106,3 +106,38 @@ def test_png_roundtrip() -> None:
         assert load_png(tmp).bgrx == frame.bgrx
     finally:
         tmp.unlink(missing_ok=True)
+
+
+class FakeVnc:
+    """Replays frames; records taps."""
+
+    def __init__(self, frames: list[Frame]) -> None:
+        self.frames = frames
+        self.taps: list[tuple[int, int]] = []
+
+    async def capture(self) -> Frame:
+        return self.frames.pop(0) if len(self.frames) > 1 else self.frames[0]
+
+    async def tap(self, x: int, y: int, hold: float = 0.15) -> None:
+        self.taps.append((x, y))
+
+
+def test_no_back_tap_during_toggle_animation() -> None:
+    import asyncio
+
+    off = load_png(FIXTURES / "holiday_off.png")
+    on = load_png(FIXTURES / "holiday_on.png")
+    # Mid-animation frame: knob neither clearly on nor off -> unknown screen.
+    mid = bytearray(off.bgrx)
+    o = (111 * 800 + 740) * 4
+    mid[o : o + 3] = bytes((128, 128, 128))
+    mid_frame = Frame(800, 480, bytes(mid))
+    assert navigator.classify(mid_frame) is navigator.Screen.UNKNOWN
+
+    home = load_png(FIXTURES / "home.png")
+    vnc = FakeVnc([off, mid_frame, on, home])
+    result = asyncio.run(
+        navigator.set_holiday_mode(vnc, True, settle=0, return_home=True)
+    )
+    assert result is True
+    assert vnc.taps == [navigator.TAP_TOGGLE]
