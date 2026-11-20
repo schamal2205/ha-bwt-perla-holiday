@@ -1,0 +1,57 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BWT Perla",
+        "description": "Enter the IP address of your BWT Perla and the device login code (the same code used for the local API). The local API must be enabled in the device menu.",
+        "data": {
+          "host": "Host",
+          "code": "Login code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "The login code was rejected. Enter the current code.",
+        "data": {
+          "code": "Login code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to the Perla API on port 8080.",
+      "invalid_auth": "Wrong login code or local API disabled.",
+      "vnc_unavailable": "The display VNC server (port 5900) is not reachable or requires a password.",
+      "unsupported_display": "Unsupported display resolution (expected 800x480)."
+    },
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "holiday_mode": {
+        "name": "Holiday mode"
+      }
+    },
+    "camera": {
+      "display": {
+        "name": "Display"
+      }
+    }
+  },
+  "exceptions": {
+    "switch_failed": {
+      "message": "Switching holiday mode on the display failed: {error}"
+    }
+  }
+}

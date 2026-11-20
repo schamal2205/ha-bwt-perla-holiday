@@ -1,0 +1,13 @@
+{
+  "entity": {
+    "switch": {
+      "holiday_mode": {
+        "default": "mdi:water-check",
+        "state": { "on": "mdi:water-off" }
+      }
+    },
+    "camera": {
+      "display": { "default": "mdi:monitor" }
+    }
+  }
+}

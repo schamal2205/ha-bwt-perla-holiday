@@ -1,0 +1,57 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BWT Perla",
+        "description": "IP-Adresse der BWT Perla und den Login-Code des Geräts eingeben (derselbe Code wie für die lokale API). Die lokale API muss im Gerätemenü aktiviert sein.",
+        "data": {
+          "host": "Host",
+          "code": "Login-Code"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Erneut anmelden",
+        "description": "Der Login-Code wurde abgelehnt. Bitte aktuellen Code eingeben.",
+        "data": {
+          "code": "Login-Code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Keine Verbindung zur Perla-API auf Port 8080.",
+      "invalid_auth": "Falscher Login-Code oder lokale API deaktiviert.",
+      "vnc_unavailable": "Der Display-VNC-Server (Port 5900) ist nicht erreichbar oder verlangt ein Passwort.",
+      "unsupported_display": "Nicht unterstützte Display-Auflösung (erwartet 800x480)."
+    },
+    "abort": {
+      "already_configured": "Dieses Gerät ist bereits eingerichtet.",
+      "reauth_successful": "Erneute Anmeldung erfolgreich."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "holiday_mode": {
+        "name": "Urlaubsmodus"
+      }
+    },
+    "camera": {
+      "display": {
+        "name": "Display"
+      }
+    }
+  },
+  "exceptions": {
+    "switch_failed": {
+      "message": "Umschalten des Urlaubsmodus am Display fehlgeschlagen: {error}"
+    }
+  }
+}
