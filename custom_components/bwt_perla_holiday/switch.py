@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .api import holiday_scheduled_start
 from .const import DOMAIN
 from .coordinator import PerlaConfigEntry, PerlaControlError
 from .entity import PerlaEntity
@@ -36,6 +37,11 @@ class PerlaHolidaySwitch(PerlaEntity, SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         return self.coordinator.holiday_mode
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        start = holiday_scheduled_start(self.coordinator.data or {})
+        return {"scheduled_start": start.isoformat() if start else None}
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)

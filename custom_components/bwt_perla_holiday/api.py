@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from datetime import UTC, datetime
 from typing import Any
 
 import aiohttp
@@ -58,9 +60,32 @@ class PerlaApi:
         return await self._get("GetCurrentData")
 
 
-def holiday_active(data: dict[str, Any]) -> bool:
-    """Holiday mode is active when HolidayModeStartTime is non-zero."""
+def _start_value(data: dict[str, Any]) -> int:
     try:
-        return int(data.get("HolidayModeStartTime", 0)) != 0
+        return int(data.get("HolidayModeStartTime", 0))
     except (TypeError, ValueError):
+        return 0
+
+
+def holiday_active(data: dict[str, Any], now: float | None = None) -> bool:
+    """Whether holiday mode (water shut-off) is active right now.
+
+    HolidayModeStartTime is 0 when off, 1 when switched on immediately, and
+    a Unix timestamp when a start was scheduled (e.g. in the BWT app).
+    """
+    value = _start_value(data)
+    if value <= 0:
         return False
+    if value == 1:
+        return True
+    return value <= (time.time() if now is None else now)
+
+
+def holiday_scheduled_start(
+    data: dict[str, Any], now: float | None = None
+) -> datetime | None:
+    """Return the scheduled (future) start of holiday mode, if any."""
+    value = _start_value(data)
+    if value > 1 and value > (time.time() if now is None else now):
+        return datetime.fromtimestamp(value, tz=UTC)
+    return None
