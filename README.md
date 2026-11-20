@@ -19,7 +19,8 @@ The device's web page (`http://<perla>/`) is a noVNC mirror of that display, bac
 **VNC server on port 5900 without a password**. This integration:
 
 1. **reads** the holiday mode from the API: `HolidayModeStartTime` is `1` while it is active, `0` otherwise;
-2. **switches** it by operating the touch display over VNC, the same way you would by hand.
+2. **switches** it by operating the touch display over VNC, the same way you would by hand
+   (unlocking the display with the same login code if it has locked itself).
    It identifies each screen by its colours (independent of the display language), navigates
    *Home → Menu → Functions → Holiday mode*, taps the toggle only if it is not yet in the wanted
    position, returns to the home screen, and confirms the result through the API.
@@ -94,6 +95,7 @@ python scripts/perla_cli.py 192.168.1.50 off
   A firmware update may change the layout or close the VNC port, and switching will then fail with an error.
 - The first touch after the display has gone dark only wakes it. The integration handles this by re-checking the screen after every tap.
 - If someone is using the display at the same moment, the integration may take over the screen.
+- The display **locks itself after about 10 minutes** of inactivity (login screen). The integration then types the configured login code on the on-screen keyboard (one attempt per switch action, so a wrong code can never lock you out by repeated tries). Supported code characters: letters a–z/ä/ö/ü (upper case via shift), digits and the symbols on the device keyboard.
 - Only screens and the toggle position are recognised. Unexpected dialogs make the switch fail rather than tap blindly.
 
 ## Security note

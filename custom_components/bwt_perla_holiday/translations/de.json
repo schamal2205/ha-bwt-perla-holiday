@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "BWT Perla",
-        "description": "IP-Adresse der BWT Perla und den Login-Code des Geräts eingeben (derselbe Code wie für die lokale API). Die lokale API muss im Gerätemenü aktiviert sein.",
+        "description": "IP-Adresse der BWT Perla und den Login-Code des Geräts eingeben. Der Code wird für die lokale API und zum Entsperren des Displays verwendet. Die lokale API muss im Gerätemenü aktiviert sein.",
         "data": {
           "host": "Host",
           "code": "Login-Code"

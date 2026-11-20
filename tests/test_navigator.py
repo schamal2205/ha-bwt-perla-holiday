@@ -80,6 +80,8 @@ def load_png(path: pathlib.Path) -> Frame:
         ("functions.png", navigator.Screen.FUNCTIONS),
         ("holiday_off.png", navigator.Screen.HOLIDAY),
         ("holiday_on.png", navigator.Screen.HOLIDAY),
+        ("login.png", navigator.Screen.LOGIN),
+        ("login_keyboard.png", navigator.Screen.LOGIN),
     ],
 )
 def test_classify(fixture: str, screen: navigator.Screen) -> None:
@@ -108,6 +110,17 @@ def test_png_roundtrip() -> None:
         tmp.unlink(missing_ok=True)
 
 
+def _run(coro):
+    """Run a coroutine on a private loop (keeps pytest-asyncio's loop intact)."""
+    import asyncio
+
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
 class FakeVnc:
     """Replays frames; records taps."""
 
@@ -123,8 +136,6 @@ class FakeVnc:
 
 
 def test_no_back_tap_during_toggle_animation() -> None:
-    import asyncio
-
     off = load_png(FIXTURES / "holiday_off.png")
     on = load_png(FIXTURES / "holiday_on.png")
     # Mid-animation frame: knob neither clearly on nor off -> unknown screen.
@@ -135,9 +146,76 @@ def test_no_back_tap_during_toggle_animation() -> None:
     assert navigator.classify(mid_frame) is navigator.Screen.UNKNOWN
 
     home = load_png(FIXTURES / "home.png")
-    vnc = FakeVnc([off, mid_frame, on, home])
-    result = asyncio.run(
+    vnc = FakeVnc([off, off, mid_frame, on, home])
+    result = _run(
         navigator.set_holiday_mode(vnc, True, settle=0, return_home=True)
     )
     assert result is True
     assert vnc.taps == [navigator.TAP_TOGGLE]
+
+
+def test_login_screen_aborts_without_tapping() -> None:
+    login = load_png(FIXTURES / "login.png")
+    vnc = FakeVnc([login])
+    with pytest.raises(navigator.NavigationError, match="login"):
+        _run(navigator.set_holiday_mode(vnc, True, settle=0))
+    assert vnc.taps == []
+
+
+def test_no_action_on_unstable_frame() -> None:
+    """A single transitional frame must not trigger a tap for that screen."""
+    menu = load_png(FIXTURES / "menu.png")
+    functions = load_png(FIXTURES / "functions.png")
+    holiday = load_png(FIXTURES / "holiday_on.png")
+    home = load_png(FIXTURES / "home.png")
+    # Stale "functions" frame directly followed by the real menu: the
+    # navigator must tap "Functions" (menu), never the holiday row.
+    vnc = FakeVnc([functions, menu, menu, functions, functions, holiday, holiday, home])
+    _run(navigator.set_holiday_mode(vnc, True, settle=0))
+    assert vnc.taps[0] == navigator.TAP_FUNCTIONS
+
+
+def test_keyboard_layout_positions() -> None:
+    assert navigator.LETTER_KEYS["q"] == (49, 193)
+    assert navigator.LETTER_KEYS["a"] == (49, 271)
+    assert navigator.LETTER_KEYS["m"] == (609, 350)
+    assert navigator.NUMERIC_KEYS["0"] == (679, 193)
+    assert navigator.unsupported_code_chars("abc123") == set()
+    assert navigator.unsupported_code_chars("ab#") == {"#"}
+
+
+def test_keyboard_screens_detected() -> None:
+    assert navigator.keyboard_open(load_png(FIXTURES / "login_keyboard.png"))
+    assert navigator.keyboard_open(load_png(FIXTURES / "login_keyboard_numeric.png"))
+    assert navigator.login_form_shown(load_png(FIXTURES / "login.png"))
+    assert not navigator.login_form_shown(load_png(FIXTURES / "home.png"))
+
+
+def test_unlock_types_code_and_presses_login() -> None:
+    login = load_png(FIXTURES / "login.png")
+    kbd = load_png(FIXTURES / "login_keyboard.png")
+    home = load_png(FIXTURES / "home.png")
+    vnc = FakeVnc([kbd, login, home])
+    _run(navigator.unlock(vnc, "aB1", settle=0))
+    taps = vnc.taps
+    assert taps[0] == navigator.TAP_CODE_FIELD
+    typed = [t for t in taps[1:] if t != navigator.TAP_KBD_BACKSPACE]
+    assert typed == [
+        navigator.LETTER_KEYS["a"],
+        navigator.TAP_KBD_SHIFT,
+        navigator.LETTER_KEYS["b"],
+        navigator.TAP_KBD_SWITCH,
+        navigator.NUMERIC_KEYS["1"],
+        navigator.TAP_KBD_DONE,
+        navigator.TAP_LOGIN_BUTTON,
+    ]
+
+
+def test_rejected_code_is_tried_only_once() -> None:
+    login = load_png(FIXTURES / "login.png")
+    kbd = load_png(FIXTURES / "login_keyboard.png")
+    vnc = FakeVnc([login, login, kbd, login])
+    with pytest.raises(navigator.NavigationError, match="not accepted"):
+        _run(navigator.set_holiday_mode(vnc, True, settle=0, code="abc"))
+    assert vnc.taps.count(navigator.TAP_LOGIN_BUTTON) == 1
+    assert navigator.TAP_TOGGLE not in vnc.taps

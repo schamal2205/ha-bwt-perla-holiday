@@ -14,7 +14,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import PerlaApi, PerlaApiError, PerlaAuthError, holiday_active
-from .const import DOMAIN, VERIFY_ATTEMPTS, VERIFY_DELAY
+from .const import CONF_CODE, DOMAIN, VERIFY_ATTEMPTS, VERIFY_DELAY
 from .navigator import NavigationError, set_holiday_mode
 from .vnc import Frame, PerlaVnc, VncError
 
@@ -53,6 +53,8 @@ class PerlaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.api = api
         self.host = host
+        # Same code as the API: also unlocks the display's login screen.
+        self.code: str = entry.data[CONF_CODE]
         # Only one VNC session at a time drives the display.
         self.display_lock = asyncio.Lock()
 
@@ -76,7 +78,7 @@ class PerlaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async with self.display_lock:
             try:
                 async with PerlaVnc(self.host) as vnc:
-                    await set_holiday_mode(vnc, enabled)
+                    await set_holiday_mode(vnc, enabled, code=self.code)
             except (VncError, NavigationError) as err:
                 _LOGGER.warning(
                     "Switching holiday mode %s via the display failed: %s",
